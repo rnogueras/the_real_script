@@ -1,0 +1,18 @@
+name: the-real-script
+
+
+channels:
+    - conda-forge
+
+dependencies:
+
+    # Core packages
+    - python=3.9.6
+    - ipython=7.27.0
+    - pip=21.2.4
+
+    # Data science
+    - numpy=1.21.2
+
+    # Code
+    - black=21.8b0
