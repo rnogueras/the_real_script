@@ -10,22 +10,33 @@ from typing import Optional, Union, List
 
 import numpy as np
 
-
+# Values
 CROMATIC_VALUES = np.arange(12)
 
+# Masks
 O = np.nan
 SCALE_MASKS = {"heptatonic": {"diatonic": [1, O, 1, O, 1, 1, O, 1, O, 1, O, 1]}}
 
+# Note names
 NOTE_NAME_TUPLE = ("C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")
 NOTE_VALUES = dict(zip(NOTE_NAME_TUPLE, CROMATIC_VALUES))
 NOTE_NAMES = dict(zip(CROMATIC_VALUES, NOTE_NAME_TUPLE))
 
+# Degrees
 DEGREES = ("I", "II", "III", "IV", "V", "VI", "VII", "VIII")
 C_MAJOR_DEGREE_VALUES = dict(zip(DEGREES[0:9], {0, 2, 4, 5, 7, 9, 11}))
 
+# Intervals
+INTERVALS = dict(
+    zip(
+        ["P1", "m2", "M2", "m3", "M3", "P4", "TT", "P5", "m6", "M6", "m7", "M7", "P8"],
+        list(CROMATIC_VALUES) + [12],
+    )
+)
+
 
 def modulate(a: Union[int, np.array], b: Union[int, np.array]) -> np.array:
-    """Modulate the note or scale 'a' by adding the scalar or vector 'b'."""
+    """Modulate the note, chord or scale 'a' by adding 'b'."""
     outcome = np.array(a + b)
     while (outcome > 11).any():
         outcome = np.where(outcome > 11, outcome - 12, outcome)
