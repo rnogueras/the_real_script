@@ -90,10 +90,9 @@ class Scale:
         """Translate mode note values to names."""
         return list(np.vectorize(NOTE_NAMES.get)(self.mode_values))
 
-    # TODO: enable option to calculate only one chord
-    def get_chord_notes(self) -> List[str]:
+    def get_chord_notes(self, degree: str, amount: int = 4) -> List[str]:
         """Translate chord note values to names."""
-        return {
-            DEGREE_NAMES[index]: list(np.vectorize(NOTE_NAMES.get)(chord))
-            for index, chord in enumerate(self.chord_values)
-        }
+        degree = DEGREE_VALUES[degree]
+        selected_chord = self.chord_values[degree]
+        note_names = np.vectorize(NOTE_NAMES.get)(selected_chord)
+        return list(note_names[0:amount])
