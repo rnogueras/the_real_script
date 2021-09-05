@@ -10,12 +10,10 @@ from typing import Optional, Union, List
 
 import numpy as np
 
-# Values
-CROMATIC_VALUES = np.arange(12)
 
-# Masks
-O = np.nan
-SCALE_MASKS = {"heptatonic": {"diatonic": [1, O, 1, O, 1, 1, O, 1, O, 1, O, 1]}}
+# Scales
+CROMATIC_VALUES = np.arange(12)
+SCALE_INDEX = {"diatonic": [0, 2, 4, 5, 7, 9, 11]}
 
 # Note names
 NOTE_NAME_TUPLE = ("C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")
@@ -23,8 +21,7 @@ NOTE_VALUES = dict(zip(NOTE_NAME_TUPLE, CROMATIC_VALUES))
 NOTE_NAMES = dict(zip(CROMATIC_VALUES, NOTE_NAME_TUPLE))
 
 # Degrees
-DEGREES = ("I", "II", "III", "IV", "V", "VI", "VII", "VIII")
-C_MAJOR_DEGREE_VALUES = dict(zip(DEGREES[0:9], {0, 2, 4, 5, 7, 9, 11}))
+DEGREES = {"I": 0, "II": 1, "III": 2, "IV": 3, "V": 4, "VI": 5, "VII": 6, "VIII":7}
 
 # Intervals
 INTERVALS = dict(
@@ -52,32 +49,31 @@ class Scale:
         self,
         tonic: str,
         scale_type: Optional[str] = "diatonic",
-        scale_size: Optional[str] = "heptatonic",
         mode: Optional[str] = "I",
     ) -> None:
         """Class instance constructor."""
         self.tonic = tonic
         self.scale_type = scale_type
-        self.scale_size = scale_size
         self.cromatic_values = self.init_cromatic_values()
-        self.mode = mode
-        self.mode_mask = self.init_mode_mask()
+        self.mode = DEGREES[mode]
+        self.mode_index = self.init_mode_index()
         self.scale_values = self.init_scale_values()
         self.chord_values = self.init_chord_values()
 
     def init_cromatic_values(self) -> np.array:
-        """Modulate cromatic values to the provided tonic."""
+        """Return the cromatic scale modulated to the tonic."""
         return modulate(CROMATIC_VALUES, NOTE_VALUES[self.tonic])
 
-    def init_mode_mask(self) -> List[int]:
-        """Retrieve scale mask and displace it to the selected mode."""
-        mode_value = C_MAJOR_DEGREE_VALUES[self.mode]
-        scale_mask = SCALE_MASKS[self.scale_size][self.scale_type] * 2
-        return [scale_mask[number] for number in range(mode_value, 12 + mode_value)]
-
+    def init_mode_index(self) -> List[int]:
+        """Retrieve scale index and transform it into the selected mode index."""
+        scale = SCALE_INDEX[self.scale_type]
+        double_scale = scale * 2
+        mode_indexes = range(self.mode, self.mode + len(scale))
+        return [double_scale[index] for index in mode_indexes]
+    
     def init_scale_values(self) -> np.array:
-        """Mask the chromatic values to obtain the scale values."""
-        return np.array(self.cromatic_values) * np.array(self.mode_mask)
+        """Use the mode index on the chromatic values to obtain the scale values."""
+        return self.cromatic_values[self.mode_index]
 
     def init_chord_values(self) -> np.array:
         """Get the full chord (7 notes) of every degree in the scale."""
