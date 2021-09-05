@@ -11,8 +11,9 @@ dependencies:
     - ipython=7.27.0
     - pip=21.2.4
 
+    # Development
+    - black=21.8b0
+    - pytest=6.2.4
+
     # Data science
     - numpy=1.21.2
-
-    # Code
-    - black=21.8b0
