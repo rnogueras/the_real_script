@@ -10,22 +10,22 @@ from typing import Optional, Union, List
 
 import numpy as np
 
-x = np.nan
 
 CROMATIC_VALUES = np.arange(12)
-SCALE_MASKS = {
-    "heptatonic": {
-        "diatonic": [1, x, 1, x, 1, 1, x, 1, x, 1, x, 1],
-    }
-}
-CROMATIC_NAMES = ["C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
-NOTE_VALUES = dict(zip(CROMATIC_NAMES, CROMATIC_VALUES))
-NOTE_NAMES = dict(zip(CROMATIC_VALUES, CROMATIC_NAMES))
-BASE_DEGREE_VALUES = {"I": 0, "II": 2, "III": 4, "IV": 5, "V": 7, "VI": 9, "VII": 11}
+
+O = np.nan
+SCALE_MASKS = {"heptatonic": {"diatonic": [1, O, 1, O, 1, 1, O, 1, O, 1, O, 1]}}
+
+NOTE_NAME_TUPLE = ("C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")
+NOTE_VALUES = dict(zip(NOTE_NAME_TUPLE, CROMATIC_VALUES))
+NOTE_NAMES = dict(zip(CROMATIC_VALUES, NOTE_NAME_TUPLE))
+
+DEGREES = ("I", "II", "III", "IV", "V", "VI", "VII", "VIII")
+C_MAJOR_DEGREE_VALUES = dict(zip(DEGREES[0:9], {0, 2, 4, 5, 7, 9, 11}))
 
 
 def modulate(a: Union[int, np.array], b: Union[int, np.array]) -> np.array:
-    """Modulate the note or scale 'a' by adding 'b'."""
+    """Modulate the note or scale 'a' by adding the scalar or vector 'b'."""
     outcome = np.array(a + b)
     while (outcome > 11).any():
         outcome = np.where(outcome > 11, outcome - 12, outcome)
@@ -48,28 +48,43 @@ class Scale:
         self.tonic = tonic
         self.scale_type = scale_type
         self.scale_size = scale_size
+        self.cromatic_values = self.init_cromatic_values()
         self.mode = mode
-        self.scale_mask = self.init_scale_mask(scale_size, scale_type, mode)
-        self.cromatic_values = self.init_cromatic_values(tonic)
-        self.scale_values = self.init_scale_values(np.array(self.scale_mask))
+        self.mode_mask = self.init_mode_mask()
+        self.scale_values = self.init_scale_values()
+        self.chord_values = self.init_chord_values()
 
-    def init_cromatic_values(self, tonic: str) -> np.array:
-        """Init cromatic values."""
-        return modulate(CROMATIC_VALUES, NOTE_VALUES[tonic])
+    def init_cromatic_values(self) -> np.array:
+        """Modulate cromatic values to the provided tonic."""
+        return modulate(CROMATIC_VALUES, NOTE_VALUES[self.tonic])
 
-    def init_scale_mask(self, scale_size: str, scale_type: str, mode: str) -> np.array:
-        """Init scale mask."""
-        mode_value = BASE_DEGREE_VALUES[mode]
-        repeated_mask = SCALE_MASKS[scale_size][scale_type] * 2
-        return [repeated_mask[number] for number in range(mode_value, 12 + mode_value)]
+    def init_mode_mask(self) -> List[int]:
+        """Retrieve scale mask and displace it to the selected mode."""
+        mode_value = C_MAJOR_DEGREE_VALUES[self.mode]
+        scale_mask = SCALE_MASKS[self.scale_size][self.scale_type] * 2
+        return [scale_mask[number] for number in range(mode_value, 12 + mode_value)]
 
-    def init_scale_values(self, scale_mask: np.array) -> np.array:
-        """Init scale values."""
-        return self.cromatic_values * scale_mask
+    def init_scale_values(self) -> np.array:
+        """Mask the chromatic values to obtain the scale values."""
+        return np.array(self.cromatic_values) * np.array(self.mode_mask)
 
-    def get_note_names(self) -> List[str]:
-        """Return scale note names."""
+    def init_chord_values(self) -> np.array:
+        """Get the full chord (7 notes) of every degree in the scale."""
+        scale_without_nans = self.scale_values[~np.isnan(self.scale_values)]
+        repeated_scale = list(scale_without_nans) * 3
         return [
-            NOTE_NAMES[value]
-            for value in self.scale_values[~np.isnan(self.scale_values)]
+            repeated_scale[index : index + 14 : 2]
+            for index, _ in enumerate(scale_without_nans)
         ]
+
+    def get_scale_note_names(self) -> List[str]:
+        """Translate scale note values to names."""
+        scale_without_nans = self.scale_values[~np.isnan(self.scale_values)]
+        return list(np.vectorize(NOTE_NAMES.get)(scale_without_nans))
+
+    def get_chord_note_names(self) -> List[str]:
+        """Translate chord note values to names."""
+        return {
+            DEGREES[index]: list(np.vectorize(NOTE_NAMES.get)(chord))
+            for index, chord in enumerate(self.chord_values)
+        }
