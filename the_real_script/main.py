@@ -21,7 +21,10 @@ NOTE_VALUES = dict(zip(NOTE_NAME_TUPLE, CROMATIC_VALUES))
 NOTE_NAMES = dict(zip(CROMATIC_VALUES, NOTE_NAME_TUPLE))
 
 # Degrees
-DEGREES = {"I": 0, "II": 1, "III": 2, "IV": 3, "V": 4, "VI": 5, "VII": 6, "VIII":7}
+DEGREE_TUPLE = ("I", "II", "III", "IV", "V", "VI", "VII", "VIII")
+DEGREE_VALUES = dict(zip(DEGREE_TUPLE, range(0, 9)))
+DEGREE_NAMES = dict(zip(range(0, 9), DEGREE_TUPLE))
+
 
 # Intervals
 INTERVALS = dict(
@@ -55,9 +58,9 @@ class Scale:
         self.tonic = tonic
         self.scale_type = scale_type
         self.cromatic_values = self.init_cromatic_values()
-        self.mode = DEGREES[mode]
+        self.mode = DEGREE_VALUES[mode]
         self.mode_index = self.init_mode_index()
-        self.scale_values = self.init_scale_values()
+        self.mode_values = self.init_mode_values()
         self.chord_values = self.init_chord_values()
 
     def init_cromatic_values(self) -> np.array:
@@ -66,32 +69,31 @@ class Scale:
 
     def init_mode_index(self) -> List[int]:
         """Retrieve scale index and transform it into the selected mode index."""
-        scale = SCALE_INDEX[self.scale_type]
-        double_scale = scale * 2
-        mode_indexes = range(self.mode, self.mode + len(scale))
-        return [double_scale[index] for index in mode_indexes]
+        scale_index = SCALE_INDEX[self.scale_type]
+        double_scale_index = scale_index * 2
+        mode_range = range(self.mode, self.mode + len(scale_index))
+        return [double_scale_index[number] for number in mode_range]
     
-    def init_scale_values(self) -> np.array:
-        """Use the mode index on the chromatic values to obtain the scale values."""
+    def init_mode_values(self) -> np.array:
+        """Use mode index on the chromatic values to get the mode values."""
         return self.cromatic_values[self.mode_index]
 
     def init_chord_values(self) -> np.array:
-        """Get the full chord (7 notes) of every degree in the scale."""
-        scale_without_nans = self.scale_values[~np.isnan(self.scale_values)]
-        repeated_scale = list(scale_without_nans) * 3
+        """Get the full chord (7 notes) of every degree in the mode."""
+        repeated_mode = list(self.mode_values) * 3
         return [
-            repeated_scale[index : index + 14 : 2]
-            for index, _ in enumerate(scale_without_nans)
+            repeated_mode[index : index + 14 : 2]
+            for index, _ in enumerate(self.mode_values)
         ]
 
-    def get_scale_note_names(self) -> List[str]:
-        """Translate scale note values to names."""
-        scale_without_nans = self.scale_values[~np.isnan(self.scale_values)]
-        return list(np.vectorize(NOTE_NAMES.get)(scale_without_nans))
+    def get_notes(self) -> List[str]:
+        """Translate mode note values to names."""
+        return list(np.vectorize(NOTE_NAMES.get)(self.mode_values))
 
-    def get_chord_note_names(self) -> List[str]:
+    # TODO: enable option to calculate only one chord
+    def get_chord_notes(self) -> List[str]:
         """Translate chord note values to names."""
         return {
-            DEGREES[index]: list(np.vectorize(NOTE_NAMES.get)(chord))
+            DEGREE_NAMES[index]: list(np.vectorize(NOTE_NAMES.get)(chord))
             for index, chord in enumerate(self.chord_values)
         }
