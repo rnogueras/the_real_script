@@ -13,7 +13,12 @@ import numpy as np
 
 # Scales
 CROMATIC_VALUES = np.arange(12)
-SCALE_INDEX = {"diatonic": [0, 2, 4, 5, 7, 9, 11]}
+SCALE_INDEX = {
+    "diatonic": [0, 2, 4, 5, 7, 9, 11],
+    "melodic minor": [0, 2, 3, 5, 7, 9, 11],
+    "harmonic minor": [0, 2, 3, 5, 7, 8, 11],
+    "major pentatonic": [0, 2, 4, 7, 9],
+}
 
 # Note names
 NOTE_NAME_TUPLE = ("C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")
@@ -24,7 +29,6 @@ NOTE_NAMES = dict(zip(CROMATIC_VALUES, NOTE_NAME_TUPLE))
 DEGREE_TUPLE = ("I", "II", "III", "IV", "V", "VI", "VII", "VIII")
 DEGREE_VALUES = dict(zip(DEGREE_TUPLE, range(0, 9)))
 DEGREE_NAMES = dict(zip(range(0, 9), DEGREE_TUPLE))
-
 
 # Intervals
 INTERVALS = dict(
@@ -57,8 +61,8 @@ class Scale:
         """Class instance constructor."""
         self.tonic = tonic
         self.scale_type = scale_type
+        self.mode = mode
         self.cromatic_values = self.init_cromatic_values()
-        self.mode = DEGREE_VALUES[mode]
         self.mode_index = self.init_mode_index()
         self.mode_values = self.init_mode_values()
         self.chord_values = self.init_chord_values()
@@ -68,10 +72,19 @@ class Scale:
         return modulate(CROMATIC_VALUES, NOTE_VALUES[self.tonic])
 
     def init_mode_index(self) -> List[int]:
-        """Retrieve scale index and transform it into the selected mode index."""
+        """Transform base scale index into the selected mode index."""
         scale_index = SCALE_INDEX[self.scale_type]
+        scale_size = len(scale_index)
+        mode = DEGREE_VALUES[self.mode]
+        
+        if (mode+1) > scale_size:
+            raise AttributeError(
+                f"The {self.scale_type} only has {scale_size} degrees "
+                f"but the {self.mode} was requested. ")     
+       
         double_scale_index = scale_index * 2
-        mode_range = range(self.mode, self.mode + len(scale_index))
+        mode_range = range(mode, mode + scale_size)
+        
         return [double_scale_index[number] for number in mode_range]
     
     def init_mode_values(self) -> np.array:
@@ -96,3 +109,4 @@ class Scale:
         selected_chord = self.chord_values[degree]
         note_names = np.vectorize(NOTE_NAMES.get)(selected_chord)
         return list(note_names[0:amount])
+
