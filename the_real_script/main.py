@@ -14,43 +14,65 @@ import numpy as np
 # Scales
 CROMATIC_VALUES = np.arange(12)
 SCALE_INDEX = {
-    "diatonic": [0, 2, 4, 5, 7, 9, 11],
-    "melodic minor": [0, 2, 3, 5, 7, 9, 11],
-    "harmonic minor": [0, 2, 3, 5, 7, 8, 11],
-    "major pentatonic": [0, 2, 4, 7, 9],
+    "diatonic": (0, 2, 4, 5, 7, 9, 11),
+    "melodic minor": (0, 2, 3, 5, 7, 9, 11),
+    "harmonic minor": (0, 2, 3, 5, 7, 8, 11),
+    "major pentatonic": (0, 2, 4, 7, 9),
 }
 
 # Note names
-NOTE_NAME_TUPLE = ("C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")
-NOTE_VALUES = dict(zip(NOTE_NAME_TUPLE, CROMATIC_VALUES))
-NOTE_NAMES = dict(zip(CROMATIC_VALUES, NOTE_NAME_TUPLE))
+NOTES = ("C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")
+NOTE_VALUES = dict(zip(NOTES, CROMATIC_VALUES))
+NOTE_NAMES = dict(zip(CROMATIC_VALUES, NOTES))
 
 # Degrees
-DEGREE_TUPLE = ("I", "II", "III", "IV", "V", "VI", "VII", "VIII")
-DEGREE_VALUES = dict(zip(DEGREE_TUPLE, range(0, 9)))
-DEGREE_NAMES = dict(zip(range(0, 9), DEGREE_TUPLE))
+DEGREES = ("I", "II", "III", "IV", "V", "VI", "VII", "VIII")
+DEGREE_VALUES = dict(zip(DEGREES, range(0, 9)))
+DEGREE_NAMES = dict(zip(range(0, 9), DEGREES))
 
 # Intervals
-INTERVALS = dict(
-    zip(
-        ["P1", "m2", "M2", "m3", "M3", "P4", "TT", "P5", "m6", "M6", "m7", "M7", "P8"],
-        list(CROMATIC_VALUES) + [12],
-    )
-)
+INTERVALS = ["P1", "m2", "M2", "m3", "M3", "P4", "TT", "P5", "m6", "M6", "m7", "M7", "P8"]
+INTERVAL_VALUES = dict(zip(INTERVALS, range(0, 13)))
+INTERVAL_NAMES = dict(zip(range(0, 13), INTERVALS))
+
+# Chords
+CHORD_INTERVALS = {
+    "M": (4, 3),
+    "m": (3, 4),
+    "maj7": (4, 3, 4),
+    "m7": (3, 4, 3),
+    "7": (4, 3, 3),
+    "m7b5": (3, 3, 4),
+}
+CHORD_NAMES = {intervals: chord for chord, intervals in CHORD_INTERVALS.items()}
 
 
-def modulate(a: Union[int, np.array], b: Union[int, np.array]) -> np.array:
-    """Modulate the note, chord or scale 'a' by adding 'b'."""
-    outcome = np.array(a + b)
+def modulate(
+    modulated: Union[int, np.array], modulator: Union[int, np.array]
+) -> np.array:
+    """Modulate a note, chord or scale by adding the modulator values."""
+    outcome = np.array(modulated + modulator)
+    
     while (outcome > 11).any():
         outcome = np.where(outcome > 11, outcome - 12, outcome)
     while (outcome < 0).any():
         outcome = np.where(outcome < 0, outcome + 12, outcome)
+
+    if outcome.size==1: 
+        outcome = int(outcome)
+        
     return outcome
 
 
-class Scale:
-    """Scale class."""
+def get_intervals(chord: np.array) -> List[int]:
+    """Calculate intervals between the provided note values."""
+    return [
+        modulate(next_note, -note) for note, next_note in zip(chord, chord[1:])
+    ]
+
+
+class Tonality:
+    """Tonaliy class."""
 
     def __init__(
         self,
@@ -76,17 +98,18 @@ class Scale:
         scale_index = SCALE_INDEX[self.scale_type]
         scale_size = len(scale_index)
         mode = DEGREE_VALUES[self.mode]
-        
-        if (mode+1) > scale_size:
+
+        if (mode + 1) > scale_size:
             raise AttributeError(
                 f"The {self.scale_type} only has {scale_size} degrees "
-                f"but the {self.mode} was requested. ")     
-       
+                f"but the {self.mode} was requested. "
+            )
+
         double_scale_index = scale_index * 2
         mode_range = range(mode, mode + scale_size)
-        
+
         return [double_scale_index[number] for number in mode_range]
-    
+
     def init_mode_values(self) -> np.array:
         """Use mode index on the chromatic values to get the mode values."""
         return self.cromatic_values[self.mode_index]
@@ -99,14 +122,13 @@ class Scale:
             for index, _ in enumerate(self.mode_values)
         ]
 
-    def get_notes(self) -> List[str]:
-        """Translate mode note values to names."""
+    def get_note_names(self) -> List[str]:
+        """Return scale note names from mode values."""
         return list(np.vectorize(NOTE_NAMES.get)(self.mode_values))
 
-    def get_chord_notes(self, degree: str, amount: int = 4) -> List[str]:
-        """Translate chord note values to names."""
+    def get_chord_note_names(self, degree: str, amount: int = 4) -> List[str]:
+        """Return chord note names of the specified chord."""
         degree = DEGREE_VALUES[degree]
         selected_chord = self.chord_values[degree]
         note_names = np.vectorize(NOTE_NAMES.get)(selected_chord)
         return list(note_names[0:amount])
-

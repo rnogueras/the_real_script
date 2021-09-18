@@ -19,9 +19,9 @@ TEST_C_MODE_DIFFERENCES = np.array([0, 0, 1, 0, 0, 1, 1])
         (INTERVALS["P5"], -INTERVALS["P4"]),
         (INTERVALS["P4"], -INTERVALS["P5"]),
         (INTERVALS["M3"], -INTERVALS["m6"]),
-        (INTERVALS["m3"] * 3, -INTERVALS["M6"] * 3),
-        (INTERVALS["m2"] * 5, -INTERVALS["M7"] * 5),
-        (INTERVALS["M2"] * 7, -INTERVALS["m7"] * 7),
+        (INTERVALS["m3"], -INTERVALS["M6"]),
+        (INTERVALS["m2"], -INTERVALS["M7"]),
+        (INTERVALS["M2"], -INTERVALS["m7"]),
     ],
 )
 def test_modulate_by_scalar(modulator_a, modulator_b):
