@@ -50,7 +50,10 @@ CHORD_NAMES = {intervals: chord for chord, intervals in CHORD_INTERVALS.items()}
 def modulate(
     modulated: Union[int, np.array], modulator: Union[int, np.array]
 ) -> np.array:
-    """Modulate a note, chord or scale by adding the modulator values."""
+    """
+    Modulate a note, chord or scale by adding the modulator values.
+    Then flatten the outcome to scale 0-11.
+    """
     outcome = np.array(modulated + modulator)
     
     while (outcome > 11).any():
@@ -123,7 +126,7 @@ class Tonality:
         ]
 
     def get_note_names(self) -> List[str]:
-        """Return scale note names from mode values."""
+        """Return mode note names from mode values."""
         return list(np.vectorize(NOTE_NAMES.get)(self.mode_values))
 
     def get_chord_note_names(self, degree: str, amount: int = 4) -> List[str]:
