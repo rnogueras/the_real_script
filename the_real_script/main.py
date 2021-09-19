@@ -36,17 +36,6 @@ SET_INTERVALS = {
 SET_NAMES = {intervals: chord for chord, intervals in SET_INTERVALS.items()}
 
 
-def flatten(values: Union[int, np.array]) -> Union[int, np.array]:
-    """Flatten note values to scale 0-11."""
-    while (values > 11).any():
-        values = np.where(values > 11, values - 12, values)
-    while (values < 0).any():
-        values = np.where(values < 0, values + 12, values)
-    if values.size == 1:
-        values = int(values)
-    return values
-
-
 def invert(values: np.array, inversion: int) -> np.array:
     """Return the specified musical inversion of the values."""
     return np.hstack([values[inversion:], values[:inversion]]).astype(int)
@@ -55,7 +44,7 @@ def invert(values: np.array, inversion: int) -> np.array:
 def calculate_intervals(values: np.array) -> Tuple[int]:
     """Calculate intervals between the provided note values."""
     return tuple(
-        [flatten(next_note - note) for note, next_note in zip(values, values[1:])]
+        [(next_note - note) % 12 for note, next_note in zip(values, values[1:])]
     )
 
 
@@ -113,7 +102,7 @@ class Tonality:
         inversion_values = invert(C_SCALES[self.scale_type], DEGREES.index(self.mode))
         intervals = calculate_intervals(inversion_values)
         modal_values = np.hstack([tonic_value, (tonic_value + np.cumsum(intervals))])
-        return Set(flatten(modal_values))
+        return Set(modal_values % 12)
 
     def pick_chord(self, degree: str, amount: int = 4) -> Type[Set]:
         """Returns the chord in the chosen degree with the specified amount of notes."""
