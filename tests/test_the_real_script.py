@@ -2,27 +2,25 @@ import pytest
 
 import numpy as np
 
-from main import flatten, Tonality, INTERVAL_VALUES
+from main import flatten, INTERVALS
 
 
 TEST_C_MAJOR_SCALE_VALUES = np.array([0, 2, 4, 5, 7, 9, 11])
 TEST_A_MINOR_SCALE_VALUES = np.array([9, 11, 0, 2, 4, 5, 7])
-TEST_C_MAJOR = Tonality("C")
-TEST_A_MINOR = Tonality("C", mode="VI")
 
 
 @pytest.mark.parametrize(
     "modulator_a, modulator_b",
     [
-        (INTERVAL_VALUES["P1"], INTERVAL_VALUES["P8"]),
-        (INTERVAL_VALUES["P1"], INTERVAL_VALUES["P8"]),
-        (INTERVAL_VALUES["P8"] * 3, INTERVAL_VALUES["P8"] * 3),
-        (INTERVAL_VALUES["P5"], INTERVAL_VALUES["P4"]),
-        (INTERVAL_VALUES["P4"], INTERVAL_VALUES["P5"]),
-        (INTERVAL_VALUES["m2"], INTERVAL_VALUES["M7"]),
-        (INTERVAL_VALUES["M2"], INTERVAL_VALUES["m7"]),
-        (INTERVAL_VALUES["m3"], INTERVAL_VALUES["M6"]),
-        (INTERVAL_VALUES["M3"], INTERVAL_VALUES["m6"]),
+        (INTERVALS.index("P1"), INTERVALS.index("P8")),
+        (INTERVALS.index("P1"), INTERVALS.index("P8")),
+        (INTERVALS.index("P8") * 3, INTERVALS.index("P8") * 3),
+        (INTERVALS.index("P5"), INTERVALS.index("P4")),
+        (INTERVALS.index("P4"), INTERVALS.index("P5")),
+        (INTERVALS.index("m2"), INTERVALS.index("M7")),
+        (INTERVALS.index("M2"), INTERVALS.index("m7")),
+        (INTERVALS.index("m3"), INTERVALS.index("M6")),
+        (INTERVALS.index("M3"), INTERVALS.index("m6")),
     ],
 )
 def test_flatten(modulator_a, modulator_b):
@@ -36,8 +34,3 @@ def test_flatten(modulator_a, modulator_b):
         or (scale_b > 11).any()
         or (scale_b < 0).any()
     )
-
-
-def test_init_mode_values():
-    np.testing.assert_array_equal(TEST_C_MAJOR.mode_values, TEST_C_MAJOR_SCALE_VALUES)
-    np.testing.assert_array_equal(TEST_A_MINOR.mode_values, TEST_A_MINOR_SCALE_VALUES)
