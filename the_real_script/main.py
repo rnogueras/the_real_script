@@ -6,7 +6,7 @@ author: Roberto Nogueras Zondag
 email: rnogueras@protonmail.com
 """
 
-from typing import Optional, Union, List, Tuple, Type, Sequence
+from typing import Optional, Tuple, Type
 
 import numpy as np
 
@@ -16,7 +16,6 @@ C_SCALES = {
     "diatonic": (0, 2, 4, 5, 7, 9, 11),
     "melodic minor": (0, 2, 3, 5, 7, 9, 11),
     "harmonic minor": (0, 2, 3, 5, 7, 8, 11),
-    "major pentatonic": (0, 2, 4, 7, 9),
 }
 NOTES = ("C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")
 DEGREES = ("I", "II", "III", "IV", "V", "VI", "VII")
@@ -50,8 +49,8 @@ def calculate_intervals(values: np.array) -> Tuple[int]:
 
 class Set:
     """
-    A set is a collection of tones. A chord, a scale or a
-    melody are examples of sets.
+    A set is a collection of tones. Chords, scales 
+    and melodies are examples of sets.
     """
 
     def __init__(self, values: np.array) -> None:
@@ -70,7 +69,11 @@ class Set:
 
     def __repr__(self):
         """Return notes if print is called."""
-        return str(self.notes)
+        return str(self.name)
+
+    def __getitem__(self, index):
+        """Make class indexable."""
+        return(self.values[index])
 
     def init_name(self) -> str:
         """Get name of the set."""
@@ -104,8 +107,8 @@ class Tonality:
         modal_values = np.hstack([tonic_value, (tonic_value + np.cumsum(intervals))])
         return Set(modal_values % 12)
 
-    def pick_chord(self, degree: str, amount: int = 4) -> Type[Set]:
-        """Returns the chord in the chosen degree with the specified amount of notes."""
+    def chord(self, degree: str, amount: int = 4) -> Type[Set]:
+        """Returns the chord in the chosen degree with the specified number of notes."""
         degree_value = DEGREES.index(degree)
         three_octaves_scale = list(self.scale) * 3
         full_chord = three_octaves_scale[degree_value : degree_value + 14 : 2]
