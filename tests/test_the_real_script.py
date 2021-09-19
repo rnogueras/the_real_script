@@ -2,31 +2,32 @@ import pytest
 
 import numpy as np
 
-from main import modulate, INTERVALS
+from main import flatten, Tonality, INTERVAL_VALUES
 
 
 TEST_C_MAJOR_SCALE_VALUES = np.array([0, 2, 4, 5, 7, 9, 11])
-TEST_C_MINOR_SCALE_VALUES = np.array([0, 2, 3, 5, 7, 8, 10])
-TEST_C_MODE_DIFFERENCES = np.array([0, 0, 1, 0, 0, 1, 1])
+TEST_A_MINOR_SCALE_VALUES = np.array([9, 11, 0, 2, 4, 5, 7])
+TEST_C_MAJOR = Tonality("C")
+TEST_A_MINOR = Tonality("C", mode="VI")
 
 
 @pytest.mark.parametrize(
     "modulator_a, modulator_b",
     [
-        (INTERVALS["P1"], INTERVALS["P8"]),
-        (INTERVALS["P1"], -INTERVALS["P8"]),
-        (INTERVALS["P8"] * 4, -INTERVALS["P8"] * 4),
-        (INTERVALS["P5"], -INTERVALS["P4"]),
-        (INTERVALS["P4"], -INTERVALS["P5"]),
-        (INTERVALS["M3"], -INTERVALS["m6"]),
-        (INTERVALS["m3"] * 3, -INTERVALS["M6"] * 3),
-        (INTERVALS["m2"] * 5, -INTERVALS["M7"] * 5),
-        (INTERVALS["M2"] * 7, -INTERVALS["m7"] * 7),
+        (INTERVAL_VALUES["P1"], INTERVAL_VALUES["P8"]),
+        (INTERVAL_VALUES["P1"], INTERVAL_VALUES["P8"]),
+        (INTERVAL_VALUES["P8"] * 3, INTERVAL_VALUES["P8"] * 3),
+        (INTERVAL_VALUES["P5"], INTERVAL_VALUES["P4"]),
+        (INTERVAL_VALUES["P4"], INTERVAL_VALUES["P5"]),
+        (INTERVAL_VALUES["m2"], INTERVAL_VALUES["M7"]),
+        (INTERVAL_VALUES["M2"], INTERVAL_VALUES["m7"]),
+        (INTERVAL_VALUES["m3"], INTERVAL_VALUES["M6"]),
+        (INTERVAL_VALUES["M3"], INTERVAL_VALUES["m6"]),
     ],
 )
-def test_modulate_by_scalar(modulator_a, modulator_b):
-    scale_a = modulate(TEST_C_MAJOR_SCALE_VALUES, modulator_a)
-    scale_b = modulate(TEST_C_MAJOR_SCALE_VALUES, modulator_b)
+def test_flatten(modulator_a, modulator_b):
+    scale_a = flatten(TEST_C_MAJOR_SCALE_VALUES + modulator_a)
+    scale_b = flatten(TEST_C_MAJOR_SCALE_VALUES - modulator_b)
 
     np.testing.assert_array_equal(scale_a, scale_b)
     assert (
@@ -37,15 +38,6 @@ def test_modulate_by_scalar(modulator_a, modulator_b):
     )
 
 
-@pytest.mark.parametrize(
-    "modulator_a, modulator_b",
-    [
-        (-TEST_C_MODE_DIFFERENCES, INTERVALS["P1"]),
-        (INTERVALS["P1"], TEST_C_MODE_DIFFERENCES),
-        (INTERVALS["P1"], TEST_C_MODE_DIFFERENCES + 12),
-    ],
-)
-def test_modulate_by_scale(modulator_a, modulator_b):
-    scale_a = modulate(TEST_C_MAJOR_SCALE_VALUES, modulator_a)
-    scale_b = modulate(TEST_C_MINOR_SCALE_VALUES, modulator_b)
-    np.testing.assert_array_equal(scale_a, scale_b)
+def test_init_mode_values():
+    np.testing.assert_array_equal(TEST_C_MAJOR.mode_values, TEST_C_MAJOR_SCALE_VALUES)
+    np.testing.assert_array_equal(TEST_A_MINOR.mode_values, TEST_A_MINOR_SCALE_VALUES)
