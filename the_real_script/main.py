@@ -6,41 +6,25 @@ author: Roberto Nogueras Zondag
 email: rnogueras@protonmail.com
 """
 
-from typing import Optional, Union, List, Tuple
+from typing import Optional, Tuple, Type
 
 import numpy as np
 
 
-# Scales
-CROMATIC_VALUES = np.arange(12)
-SCALE_INDEX = {
+C_SCALES = {
+    "cromatic": np.arange(12),
     "diatonic": (0, 2, 4, 5, 7, 9, 11),
     "melodic minor": (0, 2, 3, 5, 7, 9, 11),
     "harmonic minor": (0, 2, 3, 5, 7, 8, 11),
-    "major pentatonic": (0, 2, 4, 7, 9),
 }
-
-# Note names
 NOTES = ("C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")
-NOTE_VALUES = dict(zip(NOTES, CROMATIC_VALUES))
-NOTE_NAMES = dict(zip(CROMATIC_VALUES, NOTES))
-
-# Degrees
-DEGREES = ("I", "II", "III", "IV", "V", "VI", "VII", "VIII")
-DEGREE_VALUES = dict(zip(DEGREES, range(0, 9)))
-DEGREE_NAMES = dict(zip(range(0, 9), DEGREES))
-
-# Intervals
+DEGREES = ("I", "II", "III", "IV", "V", "VI", "VII")
 # fmt: off
 INTERVALS = [
     "P1", "m2", "M2", "m3", "M3", "P4", "TT", "P5", "m6", "M6", "m7", "M7", "P8"
 ]
 # fmt: on
-INTERVAL_VALUES = dict(zip(INTERVALS, range(0, 13)))
-INTERVAL_NAMES = dict(zip(range(0, 13), INTERVALS))
-
-# Chords
-CHORD_INTERVALS = {
+SET_INTERVALS = {
     "M": (4, 3),
     "m": (3, 4),
     "maj7": (4, 3, 4),
@@ -48,25 +32,55 @@ CHORD_INTERVALS = {
     "7": (4, 3, 3),
     "m7b5": (3, 3, 4),
 }
-CHORD_NAMES = {intervals: chord for chord, intervals in CHORD_INTERVALS.items()}
+SET_NAMES = {intervals: chord for chord, intervals in SET_INTERVALS.items()}
 
 
-def flatten(values: Union[int, np.array]) -> Union[int, np.array]:
-    """Flatten note values to scale 0-11."""
-    while (values > 11).any():
-        values = np.where(values > 11, values - 12, values)
-    while (values < 0).any():
-        values = np.where(values < 0, values + 12, values)
-    if values.size == 1:
-        values = int(values)
-    return values
+def invert(values: np.array, inversion: int) -> np.array:
+    """Return the specified musical inversion of the values."""
+    return np.hstack([values[inversion:], values[:inversion]]).astype(int)
 
 
-def calculate_intervals(chord: np.array) -> Tuple[int]:
+def calculate_intervals(values: np.array) -> Tuple[int]:
     """Calculate intervals between the provided note values."""
     return tuple(
-        [flatten(next_note - note) for note, next_note in zip(chord, chord[1:])]
+        [(next_note - note) % 12 for note, next_note in zip(values, values[1:])]
     )
+
+
+class Set:
+    """
+    A set is a collection of tones. Chords, scales 
+    and melodies are examples of sets.
+    """
+
+    def __init__(self, values: np.array) -> None:
+        """Class instance constructor."""
+        self.values = values
+        self.intervals = calculate_intervals(self.values)
+        self.tonic = NOTES[values[0]]
+        self.notes = [NOTES[value] for value in self.values]
+        self.name = self.init_name()
+        self.interval_names = [INTERVALS[interval] for interval in self.intervals]
+
+    def __iter__(self):
+        """Return values if iteration is called."""
+        for note in self.values:
+            yield note
+
+    def __repr__(self):
+        """Return notes if print is called."""
+        return str(self.name)
+
+    def __getitem__(self, index):
+        """Make class indexable."""
+        return(self.values[index])
+
+    def init_name(self) -> str:
+        """Get name of the set."""
+        try:
+            return self.tonic + SET_NAMES[self.intervals]
+        except KeyError:
+            return "Unknown set"
 
 
 class Tonality:
@@ -82,57 +96,20 @@ class Tonality:
         self.tonic = tonic
         self.scale_type = scale_type
         self.mode = mode
-        self.cromatic_values = self.init_cromatic_values()
-        self.mode_index = self.init_mode_index()
-        self.mode_values = self.init_mode_values()
-        self.chord_values = self.init_chord_values()
+        self.cromatic_values = Set(invert(C_SCALES["cromatic"], NOTES.index(tonic)))
+        self.scale = self.init_scale()
 
-    def init_cromatic_values(self) -> np.array:
-        """Return the cromatic scale modulated to the tonic."""
-        return flatten(CROMATIC_VALUES + NOTE_VALUES[self.tonic])
+    def init_scale(self) -> Type[Set]:
+        """Return main scale of the tonality."""
+        tonic_value = NOTES.index(self.tonic)
+        inversion_values = invert(C_SCALES[self.scale_type], DEGREES.index(self.mode))
+        intervals = calculate_intervals(inversion_values)
+        modal_values = np.hstack([tonic_value, (tonic_value + np.cumsum(intervals))])
+        return Set(modal_values % 12)
 
-    def init_mode_index(self) -> List[int]:
-        """Transform base scale index into the selected mode index."""
-        scale_index = SCALE_INDEX[self.scale_type]
-        scale_size = len(scale_index)
-        mode = DEGREE_VALUES[self.mode]
-
-        if (mode + 1) > scale_size:
-            raise AttributeError(
-                f"The {self.scale_type} only has {scale_size} degrees "
-                f"but the {self.mode} was requested. "
-            )
-
-        double_scale_index = scale_index * 2
-        mode_range = range(mode, mode + scale_size)
-
-        return [double_scale_index[number] for number in mode_range]
-
-    def init_mode_values(self) -> np.array:
-        """Use mode index on the chromatic values to get the mode values."""
-        return self.cromatic_values[self.mode_index]
-
-    def init_chord_values(self) -> np.array:
-        """Get the full chord (7 notes) of every degree in the mode."""
-        repeated_mode = list(self.mode_values) * 3
-        return [
-            repeated_mode[index : index + 14 : 2]
-            for index, _ in enumerate(self.mode_values)
-        ]
-
-    def scale(self) -> List[str]:
-        """Return mode notes from mode values."""
-        return list(np.vectorize(NOTE_NAMES.get)(self.mode_values))
-
-    def chord(self, degree: str, amount: int = 4) -> Tuple[str, List[str]]:
-        """Return chord notes from the specified degree."""
-        degree = DEGREE_VALUES[degree]
-        chord_values = self.chord_values[degree][0:amount]
-        chord_notes = np.vectorize(NOTE_NAMES.get)(chord_values)
-        chord_intervals = calculate_intervals(chord_values)
-        try:
-            chord_name = chord_notes[0] + CHORD_NAMES[chord_intervals]
-        except KeyError:
-            chord_name = "Unknown chord"
-            
-        return chord_name, list(chord_notes)
+    def chord(self, degree: str, amount: int = 4) -> Type[Set]:
+        """Returns the chord in the chosen degree with the specified number of notes."""
+        degree_value = DEGREES.index(degree)
+        three_octaves_scale = list(self.scale) * 3
+        full_chord = three_octaves_scale[degree_value : degree_value + 14 : 2]
+        return Set(full_chord[0:amount])
