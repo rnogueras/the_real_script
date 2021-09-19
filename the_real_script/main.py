@@ -6,7 +6,7 @@ author: Roberto Nogueras Zondag
 email: rnogueras@protonmail.com
 """
 
-from typing import Optional, Union, List
+from typing import Optional, List
 
 import numpy as np
 
@@ -47,35 +47,24 @@ CHORD_INTERVALS = {
 CHORD_NAMES = {intervals: chord for chord, intervals in CHORD_INTERVALS.items()}
 
 
-def modulate(
-    modulated: Union[int, np.array], modulator: Union[int, np.array]
-) -> np.array:
-    """
-    Modulate a note, chord or scale by adding the modulator values.
-    Then flatten the outcome to scale 0-11.
-    """
-    outcome = np.array(modulated + modulator)
-    
-    while (outcome > 11).any():
-        outcome = np.where(outcome > 11, outcome - 12, outcome)
-    while (outcome < 0).any():
-        outcome = np.where(outcome < 0, outcome + 12, outcome)
-
-    if outcome.size==1: 
-        outcome = int(outcome)
-        
-    return outcome
+def flatten(notes: np.array) -> np.array:
+    """Flatten note values to scale 0-11."""
+    while (notes > 11).any():
+        notes = np.where(notes > 11, notes - 12, notes)
+    while (notes < 0).any():
+        notes = np.where(notes < 0, notes + 12, notes)
+    return notes
 
 
-def get_intervals(chord: np.array) -> List[int]:
+def calculate_intervals(chord: np.array) -> List[int]:
     """Calculate intervals between the provided note values."""
     return [
-        modulate(next_note, -note) for note, next_note in zip(chord, chord[1:])
+        flatten(next_note - note) for note, next_note in zip(chord, chord[1:])
     ]
 
 
 class Tonality:
-    """Tonaliy class."""
+    """Tonality class."""
 
     def __init__(
         self,
@@ -94,7 +83,7 @@ class Tonality:
 
     def init_cromatic_values(self) -> np.array:
         """Return the cromatic scale modulated to the tonic."""
-        return modulate(CROMATIC_VALUES, NOTE_VALUES[self.tonic])
+        return flatten(CROMATIC_VALUES + NOTE_VALUES[self.tonic])
 
     def init_mode_index(self) -> List[int]:
         """Transform base scale index into the selected mode index."""
@@ -135,3 +124,9 @@ class Tonality:
         selected_chord = self.chord_values[degree]
         note_names = np.vectorize(NOTE_NAMES.get)(selected_chord)
         return list(note_names[0:amount])
+
+
+scale = Tonality("G")
+flatten(scale.mode_values + 3)
+
+scale.get_chord_note_names("III")
