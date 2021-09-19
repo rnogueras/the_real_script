@@ -6,7 +6,7 @@ author: Roberto Nogueras Zondag
 email: rnogueras@protonmail.com
 """
 
-from typing import Optional, List
+from typing import Optional, Union, List, Tuple
 
 import numpy as np
 
@@ -31,7 +31,11 @@ DEGREE_VALUES = dict(zip(DEGREES, range(0, 9)))
 DEGREE_NAMES = dict(zip(range(0, 9), DEGREES))
 
 # Intervals
-INTERVALS = ["P1", "m2", "M2", "m3", "M3", "P4", "TT", "P5", "m6", "M6", "m7", "M7", "P8"]
+# fmt: off
+INTERVALS = [
+    "P1", "m2", "M2", "m3", "M3", "P4", "TT", "P5", "m6", "M6", "m7", "M7", "P8"
+]
+# fmt: on
 INTERVAL_VALUES = dict(zip(INTERVALS, range(0, 13)))
 INTERVAL_NAMES = dict(zip(range(0, 13), INTERVALS))
 
@@ -47,20 +51,22 @@ CHORD_INTERVALS = {
 CHORD_NAMES = {intervals: chord for chord, intervals in CHORD_INTERVALS.items()}
 
 
-def flatten(values: np.array) -> np.array:
+def flatten(values: Union[int, np.array]) -> Union[int, np.array]:
     """Flatten note values to scale 0-11."""
     while (values > 11).any():
         values = np.where(values > 11, values - 12, values)
     while (values < 0).any():
         values = np.where(values < 0, values + 12, values)
+    if values.size == 1:
+        values = int(values)
     return values
 
 
-def calculate_intervals(chord: np.array) -> List[int]:
+def calculate_intervals(chord: np.array) -> Tuple[int]:
     """Calculate intervals between the provided note values."""
-    return [
-        flatten(next_note - note) for note, next_note in zip(chord, chord[1:])
-    ]
+    return tuple(
+        [flatten(next_note - note) for note, next_note in zip(chord, chord[1:])]
+    )
 
 
 class Tonality:
@@ -115,12 +121,18 @@ class Tonality:
         ]
 
     def scale(self) -> List[str]:
-        """Return mode note names from mode values."""
+        """Return mode notes from mode values."""
         return list(np.vectorize(NOTE_NAMES.get)(self.mode_values))
 
-    def chord(self, degree: str, amount: int = 4) -> List[str]:
-        """Return chord note names of the specified chord."""
+    def chord(self, degree: str, amount: int = 4) -> Tuple[str, List[str]]:
+        """Return chord notes from the specified degree."""
         degree = DEGREE_VALUES[degree]
-        selected_chord = self.chord_values[degree]
-        note_names = np.vectorize(NOTE_NAMES.get)(selected_chord)
-        return list(note_names[0:amount])
+        chord_values = self.chord_values[degree][0:amount]
+        chord_notes = np.vectorize(NOTE_NAMES.get)(chord_values)
+        chord_intervals = calculate_intervals(chord_values)
+        try:
+            chord_name = chord_notes[0] + CHORD_NAMES[chord_intervals]
+        except KeyError:
+            chord_name = "Unknown chord"
+            
+        return chord_name, list(chord_notes)

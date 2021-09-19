@@ -2,12 +2,13 @@ import pytest
 
 import numpy as np
 
-from main import flatten, INTERVAL_VALUES
+from main import flatten, Tonality, INTERVAL_VALUES
 
 
 TEST_C_MAJOR_SCALE_VALUES = np.array([0, 2, 4, 5, 7, 9, 11])
-TEST_C_MINOR_SCALE_VALUES = np.array([0, 2, 3, 5, 7, 8, 10])
-TEST_C_MODE_DIFFERENCES = np.array([0, 0, 1, 0, 0, 1, 1])
+TEST_A_MINOR_SCALE_VALUES = np.array([9, 11, 0, 2, 4, 5, 7])
+TEST_C_MAJOR = Tonality("C")
+TEST_A_MINOR = Tonality("C", mode="VI")
 
 
 @pytest.mark.parametrize(
@@ -35,3 +36,8 @@ def test_flatten(modulator_a, modulator_b):
         or (scale_b > 11).any()
         or (scale_b < 0).any()
     )
+
+
+def test_init_mode_values():
+    np.testing.assert_array_equal(TEST_C_MAJOR.mode_values, TEST_C_MAJOR_SCALE_VALUES)
+    np.testing.assert_array_equal(TEST_A_MINOR.mode_values, TEST_A_MINOR_SCALE_VALUES)
