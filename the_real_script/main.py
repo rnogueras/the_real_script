@@ -47,13 +47,13 @@ CHORD_INTERVALS = {
 CHORD_NAMES = {intervals: chord for chord, intervals in CHORD_INTERVALS.items()}
 
 
-def flatten(notes: np.array) -> np.array:
+def flatten(values: np.array) -> np.array:
     """Flatten note values to scale 0-11."""
-    while (notes > 11).any():
-        notes = np.where(notes > 11, notes - 12, notes)
-    while (notes < 0).any():
-        notes = np.where(notes < 0, notes + 12, notes)
-    return notes
+    while (values > 11).any():
+        values = np.where(values > 11, values - 12, values)
+    while (values < 0).any():
+        values = np.where(values < 0, values + 12, values)
+    return values
 
 
 def calculate_intervals(chord: np.array) -> List[int]:
@@ -114,19 +114,13 @@ class Tonality:
             for index, _ in enumerate(self.mode_values)
         ]
 
-    def get_note_names(self) -> List[str]:
+    def scale(self) -> List[str]:
         """Return mode note names from mode values."""
         return list(np.vectorize(NOTE_NAMES.get)(self.mode_values))
 
-    def get_chord_note_names(self, degree: str, amount: int = 4) -> List[str]:
+    def chord(self, degree: str, amount: int = 4) -> List[str]:
         """Return chord note names of the specified chord."""
         degree = DEGREE_VALUES[degree]
         selected_chord = self.chord_values[degree]
         note_names = np.vectorize(NOTE_NAMES.get)(selected_chord)
         return list(note_names[0:amount])
-
-
-scale = Tonality("G")
-flatten(scale.mode_values + 3)
-
-scale.get_chord_note_names("III")
