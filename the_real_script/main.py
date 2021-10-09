@@ -24,17 +24,24 @@ INTERVALS = [
     "P1", "m2", "M2", "m3", "M3", "P4", "TT", "P5", "m6", "M6", "m7", "M7", "P8"
 ]
 # fmt: on
-SET_INTERVALS = {
+PITCHSET_INTERVALS = {
+    
+    # Chords
     "M": (4, 3),
     "m": (3, 4),
     "maj7": (4, 3, 4),
     "m7": (3, 4, 3),
     "7": (4, 3, 3),
     "m7b5": (3, 3, 4),
-}
-SET_NAMES = {intervals: chord for chord, intervals in SET_INTERVALS.items()}
+    
+    # Scales
+    " cromatic": tuple(np.full(11, 1)),
+    " diatonic": (2, 2, 1, 2, 2, 2),
+    " harmonic minor": (2, 1, 2, 2, 1, 3),
+    " melodic minor": (2, 1, 2, 2, 2, 2),
 
-PITCH_SET_BUILD_TYPES = (tuple, list, np.ndarray)
+}
+PITCHSET_NAMES = {intervals: chord for chord, intervals in PITCHSET_INTERVALS.items()}
 
 
 def invert(values: np.array, inversion: int) -> np.array:
@@ -52,8 +59,9 @@ def calculate_intervals(values: np.array) -> Tuple[int]:
 # TODO: Make pitch sets constructable from either values or tonic + intervals (like in LDR).
 class PitchSet:
     """
-    A pitch set is a collection of tones. Chords, scales and melodies are examples
-    of pitch sets. Simple arithmetical operations can be performed with them.
+    A pitch set is a collection of tones. Chords, scales and 
+    melodies are examples of pitch sets. Simple arithmetical 
+    operations can be performed with them.
     """
 
     def __init__(self, values: Sequence[int]) -> None:
@@ -72,8 +80,9 @@ class PitchSet:
             values = values.values
             
         valid_builder_data_types = (int, np.int_)
+        are_valid = [isinstance(value, valid_builder_data_types) for value in values]
             
-        if not all(isinstance(value, valid_builder_data_types) for value in values):
+        if not all(are_valid):
             raise TypeError(
                 f"A pitch set can only be constructed from integers."
             )
@@ -117,7 +126,7 @@ class PitchSet:
     def init_name(self) -> str:
         """Initialize name of the set."""
         try:
-            return self.tonic + SET_NAMES[self.intervals]
+            return self.tonic + PITCHSET_NAMES[self.intervals]
         except KeyError:
             return "Unknown set"
 
@@ -135,8 +144,12 @@ class Tonality:
         self.tonic = tonic
         self.scale_type = scale_type
         self.mode = mode
-        self.cromatic_values = PitchSet(invert(C_SCALES["cromatic"], NOTES.index(tonic)))
+        self.cromatic = PitchSet(invert(C_SCALES["cromatic"], NOTES.index(tonic)))
         self.scale = self.init_scale()
+        
+    def __repr__(self):
+        """Return scale when print is called."""
+        return f"{self.scale}"
 
     def init_scale(self) -> Type[PitchSet]:
         """Return main scale of the tonality."""
@@ -144,7 +157,7 @@ class Tonality:
         inversion_values = invert(C_SCALES[self.scale_type], DEGREES.index(self.mode))
         intervals = calculate_intervals(inversion_values)
         modal_values = np.hstack([tonic_value, (tonic_value + np.cumsum(intervals))])
-        return PitchSet(modal_values % 12)
+        return PitchSet(modal_values)
 
     def chord(self, degree: str, amount: int = 4) -> Type[PitchSet]:
         """Returns the chord in the chosen degree with the specified number of notes."""
