@@ -26,18 +26,35 @@ INTERVALS = [
 # fmt: on
 PITCHSET_INTERVALS = {
     
-    # Chords
+    # Triads
     "M": (4, 3),
     "m": (3, 4),
+    
+    # 7th chords
     "maj7": (4, 3, 4),
     "m7": (3, 4, 3),
     "7": (4, 3, 3),
     "m7b5": (3, 3, 4),
+    "m7(maj7)": (3, 4, 4),
+    "maj7(#5)": (4, 4, 3),
+    "dim": (3, 3, 3),
     
-    # Scales
+    # Cromatic
     " cromatic": tuple(np.full(11, 1)),
-    " diatonic": (2, 2, 1, 2, 2, 2),
+    
+    # Diatonic modes
+    " ionian": (2, 2, 1, 2, 2, 2),
+    " dorian": (2, 1, 2, 2, 2, 1),
+    " phrygian": (1, 2, 2, 2, 1, 2),
+    " lydian": (2, 2, 2, 1, 2, 2),
+    " mixolydian": (2, 2, 1, 2, 2, 1),
+    " aeolian": (2, 1, 2, 2, 1, 2),
+    " locrian": (1, 2, 2, 1, 2, 2),
+    
+    # Harmonic minor modes
     " harmonic minor": (2, 1, 2, 2, 1, 3),
+    
+    # Melodic minor modes
     " melodic minor": (2, 1, 2, 2, 2, 2),
 
 }
@@ -87,21 +104,24 @@ class PitchSet:
                 f"A pitch set can only be constructed from integers."
             )
 
+        # Values
         self.values = np.array(values) % 12
-        self.intervals = calculate_intervals(self.values)
+        self.interval_values = calculate_intervals(self.values)
+        
+        # Names
         self.tonic = NOTES[self.values[0]]
         self.notes = [NOTES[value] for value in self.values]
         self.name = self.init_name()
-        self.interval_names = [INTERVALS[interval] for interval in self.intervals]
+        self.intervals = [INTERVALS[interval] for interval in self.interval_values]
 
     def __iter__(self):
         """Make class iterable."""
-        for value in self.values:
-            yield value
+        for notes in self.notes:
+            yield notes
 
     def __getitem__(self, index):
         """Make class indexable."""
-        return self.values[index]
+        return self.notes[index]
 
     def __add__(self, summand):
         """Make class summable."""
@@ -120,13 +140,13 @@ class PitchSet:
         return PitchSet(minuend) - self
     
     def __repr__(self):
-        """Return notes when print is called."""
-        return f"{self.name}: {self.notes}"
+        """Return name when print is called."""
+        return self.name
 
     def init_name(self) -> str:
         """Initialize name of the set."""
         try:
-            return self.tonic + PITCHSET_NAMES[self.intervals]
+            return self.tonic + PITCHSET_NAMES[self.interval_values]
         except KeyError:
             return "Unknown set"
 
@@ -155,28 +175,32 @@ class Tonality:
         """Return main scale of the tonality."""
         tonic_value = NOTES.index(self.tonic)
         inversion_values = invert(C_SCALES[self.scale_type], DEGREES.index(self.mode))
-        intervals = calculate_intervals(inversion_values)
-        modal_values = np.hstack([tonic_value, (tonic_value + np.cumsum(intervals))])
+        interval_values = calculate_intervals(inversion_values)
+        modal_values = np.hstack([tonic_value, (tonic_value + np.cumsum(interval_values))])
         return PitchSet(modal_values)
 
     def chords(self, degrees: Sequence[str], size: int = 4) -> List[Type[PitchSet]]:
-        """Returns the chords from the chosen degrees with the specified number of notes."""
+        """Return list of chords from the chosen degrees with the specified number of notes."""
         
-        if isinstance(degrees, str):
+        if isinstance(degrees, (str, int)):
             degrees = [degrees]
-            
-        for degree in degrees:
-            if degree not in DEGREES:
-                raise NameError(
-                    f"Invalid degree: {degree}"
-                )
-            
+  
         chords = []
         for degree in degrees:
-            degree_value = DEGREES.index(degree)
-            three_octaves_scale = list(self.scale) * 3
+            
+            if isinstance(degree, int):
+                degree_value = degree - 1
+            if isinstance(degree, str):
+                degree_value = DEGREES.index(degree)
+            
+            if degree_value not in range(0, 7):
+                raise ValueError(f"Invalid degree: {degree}")
+            
+            three_octaves_scale = list(self.scale.values) * 3
             seven_note_chord = three_octaves_scale[degree_value : degree_value + 14 : 2]
             chords.append(PitchSet(seven_note_chord[0:size]))
+            
+        if len(chords) == 1:
+            chords = chords[0]
 
         return chords
-    
