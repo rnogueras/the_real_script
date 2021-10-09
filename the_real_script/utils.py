@@ -6,7 +6,7 @@ author: Roberto Nogueras Zondag
 email: rnogueras@protonmail.com
 """
 
-from typing import Optional, Tuple, List, Type, Sequence
+from typing import Optional, Union, Tuple, List, Sequence
 
 import numpy as np
 
@@ -15,6 +15,9 @@ from constants import NOTES, INTERVALS, PITCHSET_NAMES, C_BASE_SCALES, DEGREES
 
 def invert(values: np.array, inversion: int) -> np.array:
     """Return the specified musical inversion of the values."""
+    if np.abs(inversion) > (len(values) - 1):
+        raise ValueError("Inversion out of range")
+    
     return np.hstack([values[inversion:], values[:inversion]]).astype(int)
 
 
@@ -24,10 +27,11 @@ def calculate_intervals(values: np.array) -> Tuple[int]:
         [(next_note - note) % 12 for note, next_note in zip(values, values[1:])]
     )
 
-
+# TODO: init family (major, minor, dominant)
+# TODO: init type (chord, scale, other)
 class PitchSet:
     """
-    A PitchSet is a collection of tones. Chords, scales and 
+    A PitchSet is a collection of notes. Chords, scales and 
     melodies can be instanciated as PitchSets. Simple arithmetical 
     operations can be performed with them.
     """
@@ -52,7 +56,7 @@ class PitchSet:
             
         if not all(are_valid):
             raise TypeError(
-                f"A pitch set can only be constructed from integers."
+                f"A PitchSet can only be constructed from integers."
             )
 
         # Value attributes
@@ -65,32 +69,32 @@ class PitchSet:
         self.name = self.init_name()
         self.intervals = [INTERVALS[interval] for interval in self.interval_values]
 
-    def __iter__(self):
+    def __iter__(self) -> str:
         """Make class iterable."""
         for notes in self.notes:
             yield notes
 
-    def __getitem__(self, index):
+    def __getitem__(self, index) -> str:
         """Make class indexable."""
         return self.notes[index]
 
-    def __add__(self, summand):
+    def __add__(self, summand) -> "PitchSet":
         """Make class summable."""
         return PitchSet(self.values + PitchSet(summand).values)
 
-    def __radd__(self, summand):
+    def __radd__(self, summand) -> "PitchSet":
         """Reverse sum."""
         return self.__add__(summand)
 
-    def __sub__(self, subtrahend):
+    def __sub__(self, subtrahend) -> "PitchSet":
         """Make class subtractable."""
         return PitchSet(self.values - PitchSet(subtrahend).values)
         
-    def __rsub__(self, minuend):
+    def __rsub__(self, minuend) -> "PitchSet":
         """Reverse subtraction."""
         return PitchSet(minuend) - self
     
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Return name when print is called."""
         return self.name
 
@@ -99,7 +103,11 @@ class PitchSet:
         try:
             return self.tonic + PITCHSET_NAMES[self.interval_values]
         except KeyError:
-            return "Unknown set"
+            return f"Unknown set: {self.notes}"
+        
+    def invert(self, inversion: int) -> "PitchSet":
+        """Return specified inversion of the set."""
+        return PitchSet(invert(self.values, inversion=inversion))
 
 
 class Tonality:
@@ -122,7 +130,7 @@ class Tonality:
         """Return scale when print is called."""
         return f"{self.scale}"
 
-    def init_scale(self) -> Type[PitchSet]:
+    def init_scale(self) -> PitchSet:
         """Return main scale of the tonality."""
         tonic_value = NOTES.index(self.tonic)
         inversion_values = invert(C_BASE_SCALES[self.scale_type], DEGREES.index(self.mode))
@@ -130,7 +138,7 @@ class Tonality:
         modal_values = np.hstack([tonic_value, (tonic_value + np.cumsum(interval_values))])
         return PitchSet(modal_values)
 
-    def chords(self, degrees: Sequence[str], size: int = 4) -> List[Type[PitchSet]]:
+    def chords(self, degrees: Sequence[Union[str, int]], size: int = 4) -> List[PitchSet]:
         """Return list of chords from the chosen degrees with the specified number of notes."""
         
         if isinstance(degrees, (str, int)):
@@ -149,7 +157,8 @@ class Tonality:
             
             three_octaves_scale = list(self.scale.values) * 3
             seven_note_chord = three_octaves_scale[degree_value : degree_value + 14 : 2]
-            chords.append(PitchSet(seven_note_chord[0:size]))
+            cropped_chord = seven_note_chord[0:size]
+            chords.append(PitchSet(cropped_chord))
             
         if len(chords) == 1:
             chords = chords[0]
