@@ -6,7 +6,7 @@ author: Roberto Nogueras Zondag
 email: rnogueras@protonmail.com
 """
 
-from typing import Optional, Tuple, Type
+from typing import Optional, Tuple, Type, Sequence
 
 import numpy as np
 
@@ -34,6 +34,8 @@ SET_INTERVALS = {
 }
 SET_NAMES = {intervals: chord for chord, intervals in SET_INTERVALS.items()}
 
+PITCH_SET_BUILD_TYPES = (tuple, list, np.ndarray)
+
 
 def invert(values: np.array, inversion: int) -> np.array:
     """Return the specified musical inversion of the values."""
@@ -47,36 +49,63 @@ def calculate_intervals(values: np.array) -> Tuple[int]:
     )
 
 
-class Set:
+# TODO: Make pitch sets constructable from either values or tonic + intervals.
+class PitchSet:
     """
-    A set is a collection of tones. Chords, scales 
-    and melodies are examples of sets.
+    A pitch set is a collection of tones. Chords, scales and melodies are examples
+    of sets. Simple arithmetical operations can be performed with them.
     """
 
-    def __init__(self, values: np.array) -> None:
+    def __init__(self, values: Sequence[int]) -> None:
         """Class instance constructor."""
-        self.values = values
+        if not isinstance(values, PITCH_SET_BUILD_TYPES):
+            raise TypeError(
+                f"Valid types to build a PitchSet are: {PITCH_SET_BUILD_TYPES}"
+            )
+        self.values = np.array(values) % 12
         self.intervals = calculate_intervals(self.values)
-        self.tonic = NOTES[values[0]]
+        self.tonic = NOTES[self.values[0]]
         self.notes = [NOTES[value] for value in self.values]
         self.name = self.init_name()
         self.interval_names = [INTERVALS[interval] for interval in self.intervals]
 
     def __iter__(self):
-        """Return values if iteration is called."""
+        """Make class iterable."""
         for note in self.values:
             yield note
 
-    def __repr__(self):
-        """Return notes if print is called."""
-        return str(self.name)
-
     def __getitem__(self, index):
         """Make class indexable."""
-        return(self.values[index])
+        return self.values[index]
+
+    def __add__(self, summand):
+        """Make class summable."""
+
+        if isinstance(summand, PitchSet):
+            return PitchSet(self.values + summand.values)
+
+        elif isinstance(summand, np.ndarray) and summand.dtype == int:
+            return PitchSet(self.values + summand)
+
+        elif isinstance(summand, (tuple, list)) and all(
+            isinstance(element, int) for element in summand
+        ):
+            return PitchSet(self.values + np.array(summand))
+        elif isinstance(summand, int):
+            return PitchSet(self.values + summand)
+        else:
+            raise TypeError("Invalid summand type.")
+
+    def __radd__(self, summand):
+        """Reverse sum."""
+        return self.__add__(summand)
+
+    def __repr__(self):
+        """Return notes when print is called."""
+        return f"{self.name}: {self.notes}"
 
     def init_name(self) -> str:
-        """Get name of the set."""
+        """Initialize name of the set."""
         try:
             return self.tonic + SET_NAMES[self.intervals]
         except KeyError:
@@ -96,20 +125,20 @@ class Tonality:
         self.tonic = tonic
         self.scale_type = scale_type
         self.mode = mode
-        self.cromatic_values = Set(invert(C_SCALES["cromatic"], NOTES.index(tonic)))
+        self.cromatic_values = PitchSet(invert(C_SCALES["cromatic"], NOTES.index(tonic)))
         self.scale = self.init_scale()
 
-    def init_scale(self) -> Type[Set]:
+    def init_scale(self) -> Type[PitchSet]:
         """Return main scale of the tonality."""
         tonic_value = NOTES.index(self.tonic)
         inversion_values = invert(C_SCALES[self.scale_type], DEGREES.index(self.mode))
         intervals = calculate_intervals(inversion_values)
         modal_values = np.hstack([tonic_value, (tonic_value + np.cumsum(intervals))])
-        return Set(modal_values % 12)
+        return PitchSet(modal_values % 12)
 
-    def chord(self, degree: str, amount: int = 4) -> Type[Set]:
+    def chord(self, degree: str, amount: int = 4) -> Type[PitchSet]:
         """Returns the chord in the chosen degree with the specified number of notes."""
         degree_value = DEGREES.index(degree)
         three_octaves_scale = list(self.scale) * 3
         full_chord = three_octaves_scale[degree_value : degree_value + 14 : 2]
-        return Set(full_chord[0:amount])
+        return PitchSet(full_chord[0:amount])
