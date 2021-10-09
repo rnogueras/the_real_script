@@ -1,5 +1,5 @@
 """
-Main file of The Real Script, program to generate random jazz standards.
+The Real Script utils.
 
 created: 2021-09-04
 author: Roberto Nogueras Zondag
@@ -10,55 +10,7 @@ from typing import Optional, Tuple, List, Type, Sequence
 
 import numpy as np
 
-
-C_SCALES = {
-    "cromatic": np.arange(12),
-    "diatonic": (0, 2, 4, 5, 7, 9, 11),
-    "melodic minor": (0, 2, 3, 5, 7, 9, 11),
-    "harmonic minor": (0, 2, 3, 5, 7, 8, 11),
-}
-NOTES = ("C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")
-DEGREES = ("I", "II", "III", "IV", "V", "VI", "VII")
-# fmt: off
-INTERVALS = [
-    "P1", "m2", "M2", "m3", "M3", "P4", "TT", "P5", "m6", "M6", "m7", "M7", "P8"
-]
-# fmt: on
-PITCHSET_INTERVALS = {
-    
-    # Triads
-    "M": (4, 3),
-    "m": (3, 4),
-    
-    # 7th chords
-    "maj7": (4, 3, 4),
-    "m7": (3, 4, 3),
-    "7": (4, 3, 3),
-    "m7b5": (3, 3, 4),
-    "m7(maj7)": (3, 4, 4),
-    "maj7(#5)": (4, 4, 3),
-    "dim": (3, 3, 3),
-    
-    # Cromatic
-    " cromatic": tuple(np.full(11, 1)),
-    
-    # Diatonic modes
-    " ionian": (2, 2, 1, 2, 2, 2),
-    " dorian": (2, 1, 2, 2, 2, 1),
-    " phrygian": (1, 2, 2, 2, 1, 2),
-    " lydian": (2, 2, 2, 1, 2, 2),
-    " mixolydian": (2, 2, 1, 2, 2, 1),
-    " aeolian": (2, 1, 2, 2, 1, 2),
-    " locrian": (1, 2, 2, 1, 2, 2),
-    
-    # Harmonic minor modes
-    " harmonic minor": (2, 1, 2, 2, 1, 3),
-    
-    # Melodic minor modes
-    " melodic minor": (2, 1, 2, 2, 2, 2),
-
-}
-PITCHSET_NAMES = {intervals: chord for chord, intervals in PITCHSET_INTERVALS.items()}
+from constants import NOTES, INTERVALS, PITCHSET_NAMES, C_BASE_SCALES, DEGREES
 
 
 def invert(values: np.array, inversion: int) -> np.array:
@@ -73,11 +25,10 @@ def calculate_intervals(values: np.array) -> Tuple[int]:
     )
 
 
-# TODO: Make pitch sets constructable from either values or tonic + intervals (like in LDR).
 class PitchSet:
     """
-    A pitch set is a collection of tones. Chords, scales and 
-    melodies are examples of pitch sets. Simple arithmetical 
+    A PitchSet is a collection of tones. Chords, scales and 
+    melodies can be instanciated as PitchSets. Simple arithmetical 
     operations can be performed with them.
     """
 
@@ -104,11 +55,11 @@ class PitchSet:
                 f"A pitch set can only be constructed from integers."
             )
 
-        # Values
+        # Value attributes
         self.values = np.array(values) % 12
         self.interval_values = calculate_intervals(self.values)
         
-        # Names
+        # Name attributes
         self.tonic = NOTES[self.values[0]]
         self.notes = [NOTES[value] for value in self.values]
         self.name = self.init_name()
@@ -144,7 +95,7 @@ class PitchSet:
         return self.name
 
     def init_name(self) -> str:
-        """Initialize name of the set."""
+        """Initialize set name."""
         try:
             return self.tonic + PITCHSET_NAMES[self.interval_values]
         except KeyError:
@@ -164,7 +115,7 @@ class Tonality:
         self.tonic = tonic
         self.scale_type = scale_type
         self.mode = mode
-        self.cromatic = PitchSet(invert(C_SCALES["cromatic"], NOTES.index(tonic)))
+        self.cromatic = PitchSet(invert(C_BASE_SCALES["cromatic"], NOTES.index(tonic)))
         self.scale = self.init_scale()
         
     def __repr__(self):
@@ -174,7 +125,7 @@ class Tonality:
     def init_scale(self) -> Type[PitchSet]:
         """Return main scale of the tonality."""
         tonic_value = NOTES.index(self.tonic)
-        inversion_values = invert(C_SCALES[self.scale_type], DEGREES.index(self.mode))
+        inversion_values = invert(C_BASE_SCALES[self.scale_type], DEGREES.index(self.mode))
         interval_values = calculate_intervals(inversion_values)
         modal_values = np.hstack([tonic_value, (tonic_value + np.cumsum(interval_values))])
         return PitchSet(modal_values)
