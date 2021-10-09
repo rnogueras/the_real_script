@@ -1,40 +1,16 @@
 """
-Main file of The Real Script, program to generate random jazz standards.
+The Real Script utils.
 
 created: 2021-09-04
 author: Roberto Nogueras Zondag
 email: rnogueras@protonmail.com
 """
 
-from typing import Optional, Tuple, Type, Sequence
+from typing import Optional, Tuple, List, Type, Sequence
 
 import numpy as np
 
-
-C_SCALES = {
-    "cromatic": np.arange(12),
-    "diatonic": (0, 2, 4, 5, 7, 9, 11),
-    "melodic minor": (0, 2, 3, 5, 7, 9, 11),
-    "harmonic minor": (0, 2, 3, 5, 7, 8, 11),
-}
-NOTES = ("C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")
-DEGREES = ("I", "II", "III", "IV", "V", "VI", "VII")
-# fmt: off
-INTERVALS = [
-    "P1", "m2", "M2", "m3", "M3", "P4", "TT", "P5", "m6", "M6", "m7", "M7", "P8"
-]
-# fmt: on
-SET_INTERVALS = {
-    "M": (4, 3),
-    "m": (3, 4),
-    "maj7": (4, 3, 4),
-    "m7": (3, 4, 3),
-    "7": (4, 3, 3),
-    "m7b5": (3, 3, 4),
-}
-SET_NAMES = {intervals: chord for chord, intervals in SET_INTERVALS.items()}
-
-PITCH_SET_BUILD_TYPES = (tuple, list, np.ndarray)
+from constants import NOTES, INTERVALS, PITCHSET_NAMES, C_BASE_SCALES, DEGREES
 
 
 def invert(values: np.array, inversion: int) -> np.array:
@@ -49,11 +25,11 @@ def calculate_intervals(values: np.array) -> Tuple[int]:
     )
 
 
-# TODO: Make pitch sets constructable from either values or tonic + intervals (like in LDR).
 class PitchSet:
     """
-    A pitch set is a collection of tones. Chords, scales and melodies are examples
-    of pitch sets. Simple arithmetical operations can be performed with them.
+    A PitchSet is a collection of tones. Chords, scales and 
+    melodies can be instanciated as PitchSets. Simple arithmetical 
+    operations can be performed with them.
     """
 
     def __init__(self, values: Sequence[int]) -> None:
@@ -72,27 +48,31 @@ class PitchSet:
             values = values.values
             
         valid_builder_data_types = (int, np.int_)
+        are_valid = [isinstance(value, valid_builder_data_types) for value in values]
             
-        if not all(isinstance(value, valid_builder_data_types) for value in values):
+        if not all(are_valid):
             raise TypeError(
                 f"A pitch set can only be constructed from integers."
             )
 
+        # Value attributes
         self.values = np.array(values) % 12
-        self.intervals = calculate_intervals(self.values)
+        self.interval_values = calculate_intervals(self.values)
+        
+        # Name attributes
         self.tonic = NOTES[self.values[0]]
         self.notes = [NOTES[value] for value in self.values]
         self.name = self.init_name()
-        self.interval_names = [INTERVALS[interval] for interval in self.intervals]
+        self.intervals = [INTERVALS[interval] for interval in self.interval_values]
 
     def __iter__(self):
         """Make class iterable."""
-        for value in self.values:
-            yield value
+        for notes in self.notes:
+            yield notes
 
     def __getitem__(self, index):
         """Make class indexable."""
-        return self.values[index]
+        return self.notes[index]
 
     def __add__(self, summand):
         """Make class summable."""
@@ -111,13 +91,13 @@ class PitchSet:
         return PitchSet(minuend) - self
     
     def __repr__(self):
-        """Return notes when print is called."""
-        return f"{self.name}: {self.notes}"
+        """Return name when print is called."""
+        return self.name
 
     def init_name(self) -> str:
-        """Initialize name of the set."""
+        """Initialize set name."""
         try:
-            return self.tonic + SET_NAMES[self.intervals]
+            return self.tonic + PITCHSET_NAMES[self.interval_values]
         except KeyError:
             return "Unknown set"
 
@@ -135,20 +115,43 @@ class Tonality:
         self.tonic = tonic
         self.scale_type = scale_type
         self.mode = mode
-        self.cromatic_values = PitchSet(invert(C_SCALES["cromatic"], NOTES.index(tonic)))
+        self.cromatic = PitchSet(invert(C_BASE_SCALES["cromatic"], NOTES.index(tonic)))
         self.scale = self.init_scale()
+        
+    def __repr__(self):
+        """Return scale when print is called."""
+        return f"{self.scale}"
 
     def init_scale(self) -> Type[PitchSet]:
         """Return main scale of the tonality."""
         tonic_value = NOTES.index(self.tonic)
-        inversion_values = invert(C_SCALES[self.scale_type], DEGREES.index(self.mode))
-        intervals = calculate_intervals(inversion_values)
-        modal_values = np.hstack([tonic_value, (tonic_value + np.cumsum(intervals))])
-        return PitchSet(modal_values % 12)
+        inversion_values = invert(C_BASE_SCALES[self.scale_type], DEGREES.index(self.mode))
+        interval_values = calculate_intervals(inversion_values)
+        modal_values = np.hstack([tonic_value, (tonic_value + np.cumsum(interval_values))])
+        return PitchSet(modal_values)
 
-    def chord(self, degree: str, amount: int = 4) -> Type[PitchSet]:
-        """Returns the chord in the chosen degree with the specified number of notes."""
-        degree_value = DEGREES.index(degree)
-        three_octaves_scale = list(self.scale) * 3
-        seven_note_chord = three_octaves_scale[degree_value : degree_value + 14 : 2]
-        return PitchSet(seven_note_chord[0:amount])
+    def chords(self, degrees: Sequence[str], size: int = 4) -> List[Type[PitchSet]]:
+        """Return list of chords from the chosen degrees with the specified number of notes."""
+        
+        if isinstance(degrees, (str, int)):
+            degrees = [degrees]
+  
+        chords = []
+        for degree in degrees:
+            
+            if isinstance(degree, int):
+                degree_value = degree - 1
+            if isinstance(degree, str):
+                degree_value = DEGREES.index(degree)
+            
+            if degree_value not in range(0, 7):
+                raise ValueError(f"Invalid degree: {degree}")
+            
+            three_octaves_scale = list(self.scale.values) * 3
+            seven_note_chord = three_octaves_scale[degree_value : degree_value + 14 : 2]
+            chords.append(PitchSet(seven_note_chord[0:size]))
+            
+        if len(chords) == 1:
+            chords = chords[0]
+
+        return chords
