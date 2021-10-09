@@ -6,7 +6,7 @@ author: Roberto Nogueras Zondag
 email: rnogueras@protonmail.com
 """
 
-from typing import Optional, Tuple, Type, Sequence
+from typing import Optional, Tuple, List, Type, Sequence
 
 import numpy as np
 
@@ -159,9 +159,24 @@ class Tonality:
         modal_values = np.hstack([tonic_value, (tonic_value + np.cumsum(intervals))])
         return PitchSet(modal_values)
 
-    def chord(self, degree: str, amount: int = 4) -> Type[PitchSet]:
-        """Returns the chord in the chosen degree with the specified number of notes."""
-        degree_value = DEGREES.index(degree)
-        three_octaves_scale = list(self.scale) * 3
-        seven_note_chord = three_octaves_scale[degree_value : degree_value + 14 : 2]
-        return PitchSet(seven_note_chord[0:amount])
+    def chords(self, degrees: Sequence[str], size: int = 4) -> List[Type[PitchSet]]:
+        """Returns the chords from the chosen degrees with the specified number of notes."""
+        
+        if isinstance(degrees, str):
+            degrees = [degrees]
+            
+        for degree in degrees:
+            if degree not in DEGREES:
+                raise NameError(
+                    f"Invalid degree: {degree}"
+                )
+            
+        chords = []
+        for degree in degrees:
+            degree_value = DEGREES.index(degree)
+            three_octaves_scale = list(self.scale) * 3
+            seven_note_chord = three_octaves_scale[degree_value : degree_value + 14 : 2]
+            chords.append(PitchSet(seven_note_chord[0:size]))
+
+        return chords
+    
