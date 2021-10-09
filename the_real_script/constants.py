@@ -1,6 +1,6 @@
 import numpy as np
 
-C_SCALES = {
+C_BASE_SCALES = {
     "cromatic": np.arange(12),
     "diatonic": (0, 2, 4, 5, 7, 9, 11),
     "melodic minor": (0, 2, 3, 5, 7, 9, 11),
