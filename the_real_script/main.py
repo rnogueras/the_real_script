@@ -49,19 +49,35 @@ def calculate_intervals(values: np.array) -> Tuple[int]:
     )
 
 
-# TODO: Make pitch sets constructable from either values or tonic + intervals.
+# TODO: Make pitch sets constructable from either values or tonic + intervals (like in LDR).
 class PitchSet:
     """
     A pitch set is a collection of tones. Chords, scales and melodies are examples
-    of sets. Simple arithmetical operations can be performed with them.
+    of pitch sets. Simple arithmetical operations can be performed with them.
     """
 
     def __init__(self, values: Sequence[int]) -> None:
         """Class instance constructor."""
-        if not isinstance(values, PITCH_SET_BUILD_TYPES):
+        
+        valid_builder_types = (int, tuple, list, np.ndarray, PitchSet)
+        
+        if not isinstance(values, valid_builder_types):
             raise TypeError(
-                f"Valid types to build a PitchSet are: {PITCH_SET_BUILD_TYPES}"
+                f"Valid object types to build a PitchSet are: {valid_builder_types}"
             )
+            
+        if isinstance(values, int):
+            values = [values]
+        if isinstance(values, PitchSet):
+            values = values.values
+            
+        valid_builder_data_types = (int, np.int_)
+            
+        if not all(isinstance(value, valid_builder_data_types) for value in values):
+            raise TypeError(
+                f"A pitch set can only be constructed from integers."
+            )
+
         self.values = np.array(values) % 12
         self.intervals = calculate_intervals(self.values)
         self.tonic = NOTES[self.values[0]]
@@ -71,8 +87,8 @@ class PitchSet:
 
     def __iter__(self):
         """Make class iterable."""
-        for note in self.values:
-            yield note
+        for value in self.values:
+            yield value
 
     def __getitem__(self, index):
         """Make class indexable."""
@@ -80,26 +96,20 @@ class PitchSet:
 
     def __add__(self, summand):
         """Make class summable."""
-
-        if isinstance(summand, PitchSet):
-            return PitchSet(self.values + summand.values)
-
-        elif isinstance(summand, np.ndarray) and summand.dtype == int:
-            return PitchSet(self.values + summand)
-
-        elif isinstance(summand, (tuple, list)) and all(
-            isinstance(element, int) for element in summand
-        ):
-            return PitchSet(self.values + np.array(summand))
-        elif isinstance(summand, int):
-            return PitchSet(self.values + summand)
-        else:
-            raise TypeError("Invalid summand type.")
+        return PitchSet(self.values + PitchSet(summand).values)
 
     def __radd__(self, summand):
         """Reverse sum."""
         return self.__add__(summand)
 
+    def __sub__(self, subtrahend):
+        """Make class subtractable."""
+        return PitchSet(self.values - PitchSet(subtrahend).values)
+        
+    def __rsub__(self, minuend):
+        """Reverse subtraction."""
+        return PitchSet(minuend) - self
+    
     def __repr__(self):
         """Return notes when print is called."""
         return f"{self.name}: {self.notes}"
@@ -140,5 +150,5 @@ class Tonality:
         """Returns the chord in the chosen degree with the specified number of notes."""
         degree_value = DEGREES.index(degree)
         three_octaves_scale = list(self.scale) * 3
-        full_chord = three_octaves_scale[degree_value : degree_value + 14 : 2]
-        return PitchSet(full_chord[0:amount])
+        seven_note_chord = three_octaves_scale[degree_value : degree_value + 14 : 2]
+        return PitchSet(seven_note_chord[0:amount])
