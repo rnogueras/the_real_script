@@ -28,22 +28,10 @@ PITCHSET_INTERVALS = {
     "maj7(#5)": (4, 4, 3),
     "dim": (3, 3, 3),
     
-    # Cromatic scale
+    # Scales
     " cromatic": tuple(np.full(11, 1)),
-    
-    # Diatonic modes
     " ionian": (2, 2, 1, 2, 2, 2),
-    " dorian": (2, 1, 2, 2, 2, 1),
-    " phrygian": (1, 2, 2, 2, 1, 2),
-    " lydian": (2, 2, 2, 1, 2, 2),
-    " mixolydian": (2, 2, 1, 2, 2, 1),
-    " aeolian": (2, 1, 2, 2, 1, 2),
-    " locrian": (1, 2, 2, 1, 2, 2),
-    
-    # Harmonic minor modes
     " harmonic minor": (2, 1, 2, 2, 1, 3),
-    
-    # Melodic minor modes
     " melodic minor": (2, 1, 2, 2, 2, 2),
 
 }
