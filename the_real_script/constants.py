@@ -33,12 +33,6 @@ PITCHSET_INTERVALS = {
     
     # Diatonic modes
     " ionian": (2, 2, 1, 2, 2, 2),
-    " dorian": (2, 1, 2, 2, 2, 1),
-    " phrygian": (1, 2, 2, 2, 1, 2),
-    " lydian": (2, 2, 2, 1, 2, 2),
-    " mixolydian": (2, 2, 1, 2, 2, 1),
-    " aeolian": (2, 1, 2, 2, 1, 2),
-    " locrian": (1, 2, 2, 1, 2, 2),
     
     # Harmonic minor modes
     " harmonic minor": (2, 1, 2, 2, 1, 3),

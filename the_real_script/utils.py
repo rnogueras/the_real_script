@@ -62,12 +62,16 @@ class PitchSet:
         # Value attributes
         self.values = np.array(values) % 12
         self.interval_values = calculate_intervals(self.values)
+        self.structure_values = np.hstack([0, np.cumsum(self.interval_values)])
         
         # Name attributes
         self.tonic = NOTES[self.values[0]]
         self.notes = [NOTES[value] for value in self.values]
         self.name = self.init_name()
         self.intervals = [INTERVALS[interval] for interval in self.interval_values]
+        self.structure = [INTERVALS[interval] for interval in self.structure_values]
+        self.third = self.init_third()
+
 
     def __iter__(self) -> str:
         """Make class iterable."""
@@ -104,6 +108,15 @@ class PitchSet:
             return self.tonic + PITCHSET_NAMES[self.interval_values]
         except KeyError:
             return f"Unknown set: {self.notes}"
+        
+    def init_third(self) -> str:
+        """Initialize third""" 
+        if 3 in self.structure_values:
+            return "minor"
+        elif 4 in self.structure_values:
+            return "major"
+        else:
+            return "suspended"
         
     def invert(self, inversion: int) -> "PitchSet":
         """Return specified inversion of the set."""
